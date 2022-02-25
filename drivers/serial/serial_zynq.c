@@ -217,9 +217,9 @@ static int zynq_serial_probe(struct udevice *dev)
 	u32 val;
 
 	/* No need to reinitialize the UART if TX already enabled */
-	val = readl(&regs->control);
-	if (val & ZYNQ_UART_CR_TX_EN)
-		return 0;
+	//val = readl(&regs->control);
+	//if (val & ZYNQ_UART_CR_TX_EN)
+		//return 0;
 
 	_uart_zynq_serial_init(plat->regs);
 
