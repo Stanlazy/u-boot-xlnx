@@ -672,3 +672,32 @@ U_BOOT_DRIVER(stpmic1_pwr_sw) = {
 	.ops = &stpmic1_pwr_sw_ops,
 	.probe = stpmic1_pwr_sw_probe,
 };
+
+int do_poweroff(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
+{
+	struct udevice *currdev;
+	
+	int ret = uclass_get_device_by_driver(UCLASS_PMIC,
+					  DM_DRIVER_GET(pmic_stpmic1), &currdev);
+	if (ret)
+		/* No PMIC on board */
+		return 0;
+	
+	ret = pmic_clrsetbits(currdev, STPMIC1_MAIN_CR,
+		STPMIC1_RREQ_EN, 0);
+	
+	if (ret)
+		return 0;
+	
+	ret = pmic_clrsetbits(currdev, STPMIC1_MAIN_CR,
+		STPMIC1_SWOFF, STPMIC1_SWOFF);
+	
+	if (ret)
+		return 0;
+
+	/* infinite loop during shutdown */
+	while (1) {}
+
+	/* not reached */
+	return 0;
+}
