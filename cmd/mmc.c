@@ -59,6 +59,7 @@ static void print_mmcinfo(struct mmc *mmc)
 			mmc->ddr_mode ? " DDR" : "");
 
 #if CONFIG_IS_ENABLED(MMC_WRITE)
+	printf("Erase Groups: %llx\n", mmc->capacity / (((u64)mmc->erase_grp_size) << 9));
 	puts("Erase Group Size: ");
 	print_size(((u64)mmc->erase_grp_size) << 9, "\n");
 #endif
