@@ -309,6 +309,7 @@ dtb-$(CONFIG_ARCH_UNIPHIER_SLD8) += \
 	uniphier-sld8-ref.dtb
 
 dtb-$(CONFIG_ARCH_ZYNQ) += \
+	zynq-stanlazy-ckv3.dtb \
 	bitmain-antminer-s9.dtb \
 	zynq-cc108.dtb \
 	zynq-cse-nand.dtb \

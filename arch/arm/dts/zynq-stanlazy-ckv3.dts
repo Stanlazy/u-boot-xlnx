@@ -1,0 +1,276 @@
+/dts-v1/;
+#include "zynq-7000.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/mfd/st,stpmic1.h>
+
+/ {
+	model = "Stanlazy CKV3";
+	compatible = "stanlazy,zynq-stanlazy-ckv3", "xlnx,zynq-7000";
+	
+	aliases {
+		serial0 = &uart0;
+		serial1 = &uart1;
+		mmc0 = &sdhci0;
+		mmc1 = &sdhci1;
+		i2c0 = &i2c0;
+		i2c1 = &i2c1;
+		usb0 = &usb0;
+		wlan0 = &ap6212;
+		bt0 = &ap6212_bt;
+		pmic0 = &stpmic1;
+		rtc0 = &ds3231;
+	};
+	
+	chosen {
+		bootargs = "console=tty1 console=ttyPS0,115200n8 fbcon=font:6x8 root=/dev/mmcblk0p2 rw rootwait panic=10 uio_pdrv_genirq.of_id=generic-uio";
+		stdout-path = "serial0:115200n8";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+		framebuffer0: framebuffer@1fff0000 {
+			status= "okay";
+			compatible = "simple-framebuffer";
+			reg = <0x1fff0000 (256 * 50 * 2)>;
+			width = <256>;
+			height = <50>;
+			stride = <(256 * 2)>;
+			format = "r5g6b5";
+		};
+	};
+	
+	memory@0 {
+		device_type = "memory";
+		reg = <0x0 0x1fff0000>;
+	};
+	
+	usb_phy0: phy0@e0002000 {
+		compatible = "smsc,usb3300", "ulpi-phy";
+		status = "okay";
+		#phy-cells = <0>;
+		reg = <0xe0002000 0x1000>;
+		view-port = <0x0170>;
+	};
+	
+	vin: vin {
+		compatible = "regulator-fixed";
+		regulator-name = "vin";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-always-on;
+	};
+	
+	uio0: uio0@40000000 {
+		reg = <0x40000000 0x40000000>;
+		compatible = "generic-uio";
+		status = "okay";
+		interrupt-parent = <&intc>;
+		interrupts = <GIC_SPI 30 IRQ_TYPE_EDGE_RISING>; /* IRQ_F2P [1] */
+	};
+	
+//	gpio-leds {
+//		compatible = "gpio-leds";
+//		status {
+//			label = "som:pink:status";
+//			gpios = <&gpio0 57 GPIO_ACTIVE_HIGH>; /* MIO 3 */
+//			linux,default-trigger = "heartbeat";
+//		};
+//	};
+};
+
+&clkc {
+	ps-clk-frequency = <33333333>;
+};
+
+&uart0 {
+	status = "okay";
+};
+
+&uart1 {
+	status = "okay";
+	
+	ap6212_bt: bluetooth {
+		status = "okay";
+		compatible = "brcm,bcm4329-bt";
+		max-speed = <4000000>;
+	};
+};
+
+&sdhci0 {
+	status = "okay";
+	broken-cd;
+	no-1-8-v;
+	bus-width = <4>;
+	max-frequency = <50000000>;
+};
+
+&sdhci1 {
+	status = "okay";
+	non-removable;
+	broken-cd;
+	no-1-8-v;
+	bus-width = <4>;
+	max-frequency = <50000000>;
+	
+	#address-cells = <1>;
+	#size-cells = <0>;
+	
+	ap6212: wifi@1 {
+		compatible = "brcm,bcm4329-fmac";
+		status = "okay";
+		reg = <1>;
+	};
+};
+
+&i2c0 {
+	status = "okay";
+	clock-frequency = <400000>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	
+	stpmic1: pmic@33 {
+		compatible = "st,stpmic1";
+		status = "okay";
+		reg = <0x33>;
+		interrupt-parent = <&intc>;
+		interrupts = <GIC_SPI 29 IRQ_TYPE_LEVEL_HIGH>; /* IRQ_F2P [0], inverted , level*/
+		
+		interrupt-controller;
+		#interrupt-cells = <2>;
+		
+		onkey {
+			compatible = "st,stpmic1-onkey";
+			status = "okay";
+			interrupts = <IT_PONKEY_F 0>, <IT_PONKEY_R 1>;
+			interrupt-names = "onkey-falling", "onkey-rising";
+			power-off-time-sec = <3>;
+			st,onkey-clear-cc-flag;
+		};
+		
+		watchdog {
+			compatible = "st,stpmic1-wdt";
+			status = "disabled";
+		};
+		
+		regulators {
+			compatible = "st,stpmic1-regulators";
+			buck1-supply = <&vin>;
+			buck2-supply = <&vin>;
+			buck3-supply = <&vin>;
+			buck4-supply = <&vin>;
+			ldo1-supply = <&vin>;
+			ldo2-supply = <&vin>;
+			ldo3-supply = <&vcc_ddr>;
+			ldo4-supply = <&vin>;
+			ldo5-supply = <&vin>;
+			ldo6-supply = <&vin>;
+			vref_ddr-supply = <&vcc_ddr>;
+			
+			v1v0: buck1 {
+				regulator-name = "v1v0";
+				regulator-min-microvolt = <900000>;
+				regulator-max-microvolt = <1100000>;
+				regulator-initial-mode = <STPMIC1_BUCK_MODE_NORMAL>;
+				interrupts = <IT_CURLIM_BUCK1 0>;
+				regulator-always-on;
+			};
+			
+			vcc_ddr: buck2 {
+				regulator-name = "vcc_ddr";
+				regulator-min-microvolt = <1350000>;
+				regulator-max-microvolt = <1350000>;
+				regulator-initial-mode = <STPMIC1_BUCK_MODE_NORMAL>;
+				interrupts = <IT_CURLIM_BUCK2 0>;
+				regulator-always-on;
+			};
+			
+			v1v8: buck3 {
+				regulator-name = "v1v8";
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <1800000>;
+				regulator-initial-mode = <STPMIC1_BUCK_MODE_NORMAL>;
+				interrupts = <IT_CURLIM_BUCK3 0>;
+				regulator-always-on;
+			};
+			
+			v3v3: buck4 {
+				regulator-name = "v3v3";
+				regulator-min-microvolt = <3300000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-initial-mode = <STPMIC1_BUCK_MODE_NORMAL>;
+				interrupts = <IT_CURLIM_BUCK4 0>;
+				regulator-always-on;
+			};
+			
+			vdd_bank34: ldo1 {
+				regulator-name = "vdd_bank34";
+				regulator-min-microvolt = <1700000>;
+				regulator-max-microvolt = <3300000>;
+				interrupts = <IT_CURLIM_LDO1 0>;
+				regulator-always-on;
+			};
+			
+			ldo2: ldo2 {
+				regulator-name = "ldo2";
+				regulator-min-microvolt = <1700000>;
+				regulator-max-microvolt = <3300000>;
+				interrupts = <IT_CURLIM_LDO2 0>;
+			};
+			
+			vtt_ddr: ldo3 {
+				regulator-name = "vtt_ddr";
+				regulator-min-microvolt = <675000>;
+				regulator-max-microvolt = <675000>;
+				interrupts = <IT_CURLIM_LDO3 0>;
+				regulator-always-on;
+			};
+			
+			v3v3a: ldo4 {
+				regulator-name = "v3v3a";
+				interrupts = <IT_CURLIM_LDO4 0>;
+				regulator-always-on;
+			};
+			
+			ldo5: ldo5 {
+				regulator-name = "ldo5";
+				regulator-min-microvolt = <1700000>;
+				regulator-max-microvolt = <3900000>;
+				interrupts = <IT_CURLIM_LDO5 0>;
+			};
+			
+			ldo6: ldo6 {
+				regulator-name = "ldo6";
+				regulator-min-microvolt = <900000>;
+				regulator-max-microvolt = <3300000>;
+				interrupts = <IT_CURLIM_LDO6 0>;
+			};
+			
+			vref_ddr: vref_ddr {
+				regulator-name = "vref_ddr";
+				regulator-always-on;
+			};
+		};
+	};
+	
+	ds3231: rtc@68 {
+		compatible = "maxim,ds3231", "dallas,ds3231", "maxim,ds3232", "dallas,ds3232";
+		status = "okay";
+		reg = <0x68>;
+		#clock-cells = <1>;
+	};
+};
+
+&i2c1 {
+        status = "okay";
+        clock-frequency = <400000>;
+        #address-cells = <1>;
+        #size-cells = <0>;
+};
+
+&usb0 {
+	status = "okay";
+	phy_type = "ulpi";
+	dr_mode = "host";
+	usb-phy = <&usb_phy0>;
+};
